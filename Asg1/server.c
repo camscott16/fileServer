@@ -124,7 +124,8 @@ void HandleClient(int clntSock)
 			while ((entry = readdir(dir)) != NULL)
 			{
 				if (entry->d_type == DT_REG)
-				{ // Only regular files
+				{
+					// use stat command to print file listing
 					struct stat fileStat;
 					if (stat(entry->d_name, &fileStat) < 0)
 					{
@@ -134,6 +135,8 @@ void HandleClient(int clntSock)
 					send(clntSock, buffer, strlen(buffer), 0);
 				}
 			}
+			// ensure that we know when the end of the list is reached so that we dont
+			// get stuck in an infinite loop
 			closedir(dir);
 			const char *endMarker = "END_OF_LIST";
 			send(clntSock, endMarker, strlen(endMarker) + 1, 0);
