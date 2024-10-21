@@ -108,6 +108,9 @@ void HandleClient(int clntSock) {
 					}
 				}
 				closedir(dir);
+				const char *endMarker = "END_OF_LIST";
+				send(clntSock, endMarker, strlen(endMarker) + 1, 0);
+
 				break;
 
 			case 2:  // DOWNLOAD

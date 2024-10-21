@@ -14,6 +14,7 @@
 void PrintMenu();
 
 int main(int argc, char *argv[]) {
+
 	if (argc != 3) {  // Test for correct number of arguments
 		DieWithUserMessage("Parameter(s)", "<Server IP> <Server Port>");
 	}
@@ -47,7 +48,7 @@ int main(int argc, char *argv[]) {
 	printf("Connected to server %s\n", servIP);
 
 	char buffer[BUFSIZE];
-	char accumulatedBuffer[BUFSIZE * 4];  // Buffer to accumulate data until a full line is received
+	char accumulatedBuffer[BUFSIZE * 4] = {0};  // Initialize buffer to avoid uninitialized value usage
 	int accumulatedLen = 0;
 	int choice;
 	int command;
@@ -56,6 +57,7 @@ int main(int argc, char *argv[]) {
 	while (scanf("%d", &choice) != EOF) {
 		getchar();  // Consume newline
 		switch (choice) {
+
 			case 1:  // Request file listing
 				command = 1;
 				send(sock, &command, sizeof(command), 0);
@@ -64,6 +66,18 @@ int main(int argc, char *argv[]) {
 				accumulatedLen = 0;
 				while ((rtnVal = recv(sock, buffer, BUFSIZE - 1, 0)) > 0) {
 					buffer[rtnVal] = '\0';
+
+					// Check if the buffer contains the end-of-list marker
+					if (strstr(buffer, "END_OF_LIST") != NULL) {
+						break;
+					}
+
+					// Ensure accumulated buffer doesn't overflow
+					if (accumulatedLen + rtnVal >= BUFSIZE * 4) {
+						fprintf(stderr, "Accumulated buffer overflow risk, aborting\n");
+						break;
+					}
+
 					strncat(accumulatedBuffer + accumulatedLen, buffer, BUFSIZE * 4 - accumulatedLen - 1);
 					accumulatedLen += rtnVal;
 
@@ -86,14 +100,14 @@ int main(int argc, char *argv[]) {
 					}
 				}
 				break;
-			case 2:  // Download file
 
+			case 2:  // Download file
 				printf(">> Enter filename you would like to download:\n>> ");
 				fgets(buffer, BUFSIZE, stdin);
 				buffer[strcspn(buffer, "\n")] = 0;  // Remove newline
 				command = 2;
 				send(sock, &command, sizeof(command), 0);
-				send(sock, buffer, strlen(buffer), 0);
+				send(sock, buffer, strlen(buffer) + 1, 0);  // Send filename with null terminator
 				FILE *downloadFile = fopen(buffer, "wb");
 				if (downloadFile == NULL) {
 					perror("Cannot create file");
@@ -102,18 +116,17 @@ int main(int argc, char *argv[]) {
 				while ((rtnVal = recv(sock, buffer, BUFSIZE, 0)) > 0) {
 					fwrite(buffer, 1, rtnVal, downloadFile);
 				}
-				fclose(downloadFile); 
-				printf("Downloaded %s", downloadFile);
+				fclose(downloadFile);
+				printf("Downloaded %s\n", buffer);
 				break;
 
 			case 3:  // Upload file
-
 				printf(">> Enter filename to upload:\n>> ");
 				fgets(buffer, BUFSIZE, stdin);
 				buffer[strcspn(buffer, "\n")] = 0;  // Remove newline
 				command = 3;
 				send(sock, &command, sizeof(command), 0);
-				send(sock, buffer, strlen(buffer), 0);
+				send(sock, buffer, strlen(buffer) + 1, 0);  // Send filename with null terminator
 
 				struct stat fileStat;
 				if (stat(buffer, &fileStat) < 0) {
@@ -129,7 +142,7 @@ int main(int argc, char *argv[]) {
 					send(sock, buffer, rtnVal, 0);
 				}
 				fclose(uploadFile);
-				printf("Uploaded: %s", uploadFile);
+				printf("Uploaded: %s\n", buffer);
 				break;
 			case 4:  // Exit
 				printf("\n>> Goodbye!!!\n");
