@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 		DieWithSystemMessage("socket() failed");
 	}
 
-	// Construct local address structure
+	// Construct local address structure (Mostly Donahoo Code)
 	struct sockaddr_in servAddr;
 	memset(&servAddr, 0, sizeof(servAddr));		  // Zero out structure
 	servAddr.sin_family = AF_INET;				  // IPv4 address family
